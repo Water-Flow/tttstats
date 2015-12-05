@@ -2,7 +2,6 @@ local peopleToUpdate = {}
 
 util.AddNetworkString( "Staty" )
 
-
 --- Scores for killing
 Inno_Kill_T = 5;
 Inno_Kill_Inno = -10;
@@ -21,10 +20,7 @@ rankOnlyClient = true;
 
 
 function loadPlyStats( ply )
-
-
 	if not ServerStatsDB.connected then 
-		
 		timer.Simple( 10, loadServerStats, ply )
 		ply.plytTime = 0;
 		ply.roundsplayed = 0;
@@ -39,21 +35,16 @@ function loadPlyStats( ply )
 		ply.ignore_messages = 1;
 		ply.dbReady = true;
 		ply.points = 0;
-		
 		return; 
 	end
 	if not ply:IsValid() then return; end
-
 	local escpName = db:escape( ply:Nick() )
     local tquery1 = db:query( "SELECT * FROM ttt_stats WHERE steamid = '" .. ply:SteamID() .. "'")
     tquery1.onSuccess = function(q)
         if not checkQuery(q) then
-
 			local tquery2 = db:query("INSERT INTO ttt_stats(steamid, nickname, playtime, roundsplayed, innocenttimes, detectivetimes, traitortimes, deaths, kills, maxfrags, headshots, last_seen, isadmin, points, ignore_messages) VALUES ('" .. ply:SteamID() .. "', '" .. escpName .. "', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '1')")
 			tquery2.onSuccess = function(q)  
-			
 				notifymessage("[Awesome Stats]Created: " .. ply:Nick()) 
-				
 				ply.plytTime = 0;
 				ply.roundsplayed = 0;
 				ply.timesInno = 0;
@@ -68,22 +59,17 @@ function loadPlyStats( ply )
 				ply.dbReady = true;
 				ply.points = 0;
 			end
-			
 			tquery2.onError = function(q,e) 
 				notifymessage("[Awesome Stats]Something went wrong")
 				notifyerror(e)
 			end
 			tquery2:start()
-			
         else
-			
 			notifymessage("[Awesome Stats]Loading: " .. ply:Nick())
 			local tquery3 = db:query( "SELECT * FROM ttt_stats WHERE steamid = '" .. ply:SteamID() .. "'")
-			
 			tquery3.onSuccess = function(q, sdata)
 			local row = sdata[1];			
 				if (#tquery3:getData() == 1) then
-      
 					ply.timesTraitor = row['traitortimes'];
 					ply.murders = row['kills'];
 					ply.timesInno = row['innocenttimes'];
@@ -103,7 +89,6 @@ function loadPlyStats( ply )
   
 				end
 			end	
-
 			tquery3.onError = function(q,e)
 				notifymessage("[Awesome Stats]Something went wrong")
 				notifyerror(e)
@@ -120,18 +105,16 @@ end
 
  
 local function DeathStat( victim, weapon, killer )
- 
 	if GAMEMODE.round_state == ROUND_ACTIVE then
+		if victim.IsGhost and victim:IsGhost() then return end
+		if killer.IsGhost and killer:IsGhost() then return end
 		if killer:IsValid() and killer.dbReady and killer.murders != nil then
 			if killer:SteamID() != victim:SteamID() then
 				if victim.lastHitGroup && victim.lastHitGroup == HITGROUP_HEAD then
 					killer.headshots = killer.headshots + 1;
 				end
-				
-				
 				-- Bellow are 'rdm' kills.
 				if killer:GetTraitor() == victim:GetTraitor() then
-				
 					if killer:GetTraitor() then
 						killer.points = killer.points + T_Kill_T;
 					elseif killer:GetDetective() and victim:GetDetective() then
@@ -143,12 +126,9 @@ local function DeathStat( victim, weapon, killer )
 					elseif not (killer:GetTraitor() or killer:GetDetective()) then
 						killer.points = killer.points + Inno_Kill_D;
 					end		
-
-					
 					killer.opKills = killer.opKills + 1;
 				-- These are 'legitimate' kills
 				else
-					
 					if killer:GetTraitor() and victim:GetDetective() then
 						killer.points = killer.points + T_Kill_D;
 					elseif killer:GetTraitor() then
@@ -157,18 +137,15 @@ local function DeathStat( victim, weapon, killer )
 						killer.points = killer.points + D_Kill_T;
 					elseif not (killer:GetTraitor() or killer:GetDetective()) then
 						killer.points = killer.points + Inno_Kill_T;
-					end	
-				
+					end
 					killer.murders = killer.murders + 1;
 				end
 			end
-		end	
-				
+		end
 		if not victim.dbReady then return; end
 		victim.deaths = victim.deaths + 1;
 		savePlyStats(victim);
-	end	
-	
+	end
 end
 
 local function roundStart()
@@ -199,29 +176,24 @@ local function roundEnd(result)
 			end
 		end
 	end	
+	savePlyStatsSQL()
 end
 
 function savePlyStats(ply)
-	
 	if table.HasValue( peopleToUpdate, ply ) then return; end
 	table.insert( peopleToUpdate, ply);
-
 end
 
 function savePlyStatsSQL()
-
 	if #peopleToUpdate == 0 then return; end
-
 	if not ServerStatsDB.connected then return; end
-	
 	ply = peopleToUpdate[1];
 	table.remove(peopleToUpdate, 1)
 	if ply:IsValid() then
-	
 		if ply:Frags() > ply.maxfrags then
 			ply.maxfrags = ply:Frags();
 		end	
-		if ply:IsAdmin() or ply:CheckGroup("trialadmin") then
+		if ply:IsUserGroup("superadmin") or ply:IsUserGroup("director") or ply:IsUserGroup("adminvip") or ply:IsUserGroup("admin") or ply:IsUserGroup("modvip") or ply:IsUserGroup("mod") then
 			ply.isAdminz = 1
 		else
 			ply.isAdminz = 0
@@ -245,18 +217,16 @@ function savePlyStatsSQL()
 						tonumber(ply.ignore_messages),
 						ply:SteamID()
 					)
-		
 		local updateQuery = db:query(formQ)
 		updateQuery.onSuccess = function(q) end; 
 		updateQuery.onError = function(q,e)
 			notifymessage("[Awesome Stats]Something went wrong")
 			notifyerror(e)
 		end
-		updateQuery:start()	
-	
+		updateQuery:start()
 	end
+	savePlyStatsSQL()
 end
-timer.Create("StatsUpdater", 1, 0, savePlyStatsSQL);
 
 function getPlayTime(ply)
 	ply.plytTime = (ply.plytTime + (CurTime() - math.Round(ply.timeCheck or CurTime())));	
@@ -266,7 +236,6 @@ end
 
 function PrintStats(ply, cmd, arg )
 	if ply.dbReady then
-	
 		ply:PrintMessage( HUD_PRINTCONSOLE, "Time played: " .. (math.Round(getPlayTime(ply)/60)) );
 		ply:PrintMessage( HUD_PRINTCONSOLE, "Score: " .. ply.points );
 		ply:PrintMessage( HUD_PRINTCONSOLE, "Rounds played: " .. ply.roundsplayed );
@@ -294,18 +263,14 @@ local function pCome( ply )
 	loadPlyStats(ply);
 end
 
-
 local function reportPlayer(ply, tabl, repName)
-
 	if not ServerStatsDB.connected then
 		repName:ChatPrint("Something went wrong and the player wasn't reported :(");
 		return
 	end
-
 	if ply.lKarma > ply:GetLiveKarma() then
 		ply.lKarma = ply:GetLiveKarma()
-	end	
-
+	end
 --	reportM = table.concat(tabl," ",3,#tabl); 
 	reportMessage = db:escape( tabl );
 	RepString = "INSERT INTO ttt_report(steamid, nickname, lKarma, opKills, message, repID, repNick) VALUES ('%s', '%s', '%d', '%d', '%s', '%s', '%s')"
@@ -320,31 +285,23 @@ local function reportPlayer(ply, tabl, repName)
 					repName:SteamID(),
 					ecName
 				)
-	
 	local updateQuery = db:query(formQ)
-
 	updateQuery.onSuccess = function(q)  
-	
 		repName:ChatPrint("Player reported! Thanks for the report.");
-	
 	end
-	
 	updateQuery.onError = function(q,e) 
 		repName:ChatPrint("Something went wrong and the player wasn't reported :(");
 		notifymessage("[Awesome Stats]Something went wrong")
 		notifyerror(e)
 	end
 	updateQuery:start()
-
 end
 
 function topTen(ply, limit)
-
 	if not ServerStatsDB.connected then
 		ply:ChatPrint("The ranking system is currently unavailable :(");
 		return
 	end
-	
 	if limit == nil then
 		limit = 5
 	elseif limit == 1337 then
@@ -352,59 +309,45 @@ function topTen(ply, limit)
 	elseif limit > 20 then
 		ply:ChatPrint("You cannot view more than 20!")
 		limit = 5
-	end	
-	
+	end
 	local topTenQ = db:query( "SELECT * FROM ttt_stats ORDER BY points desc LIMIT "..limit.."" )
     topTenQ.onSuccess = function(q, sdata)
-		
 		if (#sdata == 0) then
 			caller:ChatPrint("Something went wrong, if this persists please inform an admin.");
 			return
-		end	
-		
+		end
 		ply:ChatPrint("Rankings:")
 		local pie = 1
 		for k,srow in pairs(sdata) do
-			
 			local toPrint = string.format("(%d) - %s with a score of %d!", pie, srow['nickname'], srow['points']);
 			ply:ChatPrint(toPrint);
-			
 			pie = pie + 1
-			
 		end
-
 	end
 	topTenQ.onError = function(q,e)
 		notifymessage("[Awesome Stats]Something went wrong")
 		notifyerror(e)
 	end
 	topTenQ:start();
-
 end
 
 function getRank(ply, caller)
-
 	if not ServerStatsDB.connected then
 		caller:ChatPrint("The ranking system is currently unavailable :(");
 		return
 	end
-
 	local rankCheck = db:query( "SELECT points FROM ttt_stats WHERE steamid ='" .. ply:SteamID() .. "'" )
     rankCheck.onSuccess = function(q, sdata)
-		
 		if (#sdata != 1) then
 			caller:ChatPrint("Something went wrong, if this persists please inform an admin.");
 			return
 		end	
 		row = sdata[1];
-		
 		local rankStat = db:query( "SELECT COUNT(*) AS allcnt FROM ttt_stats")
 		rankStat.onSuccess = function(q, stdata)
-			
 			countRow = stdata[1];		
 			local anRankStat = db:query( "SELECT COUNT(*) AS cnt FROM ttt_stats WHERE points >= '" ..row['points'].. "'")
 			anRankStat.onSuccess = function(q, stddata)
-				
 				RankRow = stddata[1];
 				if caller.ignore_messages == 1 or rankOnlyClient then
 					caller:ChatPrint(ply:Nick() .. " is currently rank " .. RankRow['cnt'] .. " out of " .. countRow['allcnt'] .. " with a score of " .. row['points'] .. "!"  )
@@ -421,58 +364,41 @@ function getRank(ply, caller)
 				notifyerror(e)
 			end
 			anRankStat:start()
-			
 		end
-		
 		rankStat.onError = function(q,e)
 			notifymessage("[Awesome Stats]Something went wrong")
 			notifyerror(e)
 		end
 		rankStat:start()
-		
-		
 	end
 	rankCheck.onError = function(q,e)
 		notifymessage("[Awesome Stats]Something went wrong")
 		notifyerror(e)
 	end
 	rankCheck:start();
-
 end
 
-
-
 local function repCom( ply, text, toall )
-
 	local tLen = string.len(text);
-
 	alFound = false;
 	rPly = nil;
-	
     local tab = string.Explode( " ", text );
     if tab[1] == "!report" or tab[1] == "/report" then
-		
 		if #tab < 3 then
 			ply:ChatPrint("You need to leave a message and/or player!");
 			return false
 		end
-			
 		for k,v in pairs(player.GetAll()) do
-			
 			if string.find(string.lower(v:Nick()),string.lower(tab[2])) then
-
 				if alFound then
 					ply:ChatPrint("Two 2 or more players found with that name")
 					return
-				end
-				
+				end	
 				alFound = true;
 				rPly = v;
 			end	
 		end
-		
 		if alFound then
-		
 			lName = rPly:Nick();
 			lenName = (string.len(tab[2]) + 10);
 			local Rest = string.sub(text,lenName,tLen)
@@ -480,63 +406,46 @@ local function repCom( ply, text, toall )
 		else	
 			ply:ChatPrint("Player not found!");			
 		end
-		
 		return false;
-		
     elseif tab[1] == "!rank" or tab[1] == "/rank" then
-		
 		if #tab < 2 then
 			getRank(ply,ply)
 			return
 		end
-			
 		for k,v in pairs(player.GetAll()) do
-			
 			if string.find(string.lower(v:Nick()),string.lower(tab[2])) then
-
 				if alFound then
 					ply:ChatPrint("Two 2 or more players found with that name")
 					return
 				end
-				
 				alFound = true;
 				rPly = v;
 			end	
 		end
-		
 		if alFound then
 			getRank(rPly,ply)
 		else	
 			ply:ChatPrint("Player not found!");			
 		end
-		
-		return;
-		
+		return
 	elseif tab[1] == "!stats" or tab[1] == "/stats" then
-		
 		if #tab < 2 then
-			
 			print(ply:SteamID64())
 			net.Start( "Staty")
 				net.WriteEntity(ply)
 			net.Send(ply)
 			return
 		end
-			
 		for k,v in pairs(player.GetAll()) do
-			
 			if string.find(string.lower(v:Nick()),string.lower(tab[2])) then
-
 				if alFound then
 					ply:ChatPrint("Two 2 or more players found with that name")
 					return
 				end
-				
 				alFound = true;
 				rPly = v;
 			end	
 		end
-		
 		if alFound then
 			net.Start( "Staty")
 				net.WriteEntity(rPly)
@@ -544,12 +453,9 @@ local function repCom( ply, text, toall )
 		else	
 			ply:ChatPrint("Player not found!");			
 		end
-		
 		return;
-		
     elseif tab[1] == "!join" then
 		ply:SendLua("LocalPlayer():ConCommand('connect "..curServ.."')")
-
     elseif tab[1] == "!ignore" then
 		if ply.ignore_messages == 1 then
 			ply:ChatPrint("You are no longer ingorning rank messages");
@@ -559,27 +465,22 @@ local function repCom( ply, text, toall )
 			ply.ignore_messages = 1;
 		end
 	elseif tab[1] == "!top" then
-		
 		if( tonumber(tab[2]) == nil ) then
 			topTen(ply,1337)
 			return;
 		end		
-		
 		topTen(ply,tonumber(tab[2]))
-		
 	elseif tab[1] == "!top10" then
-		
 		topTen(ply,10)
-		
 	end
 end
 
-hook.Add( "PlayerSay", "ReportCommands", repCom)
-hook.Add( "PlayerInitialSpawn", "playerComes", pCome )
-hook.Add( "PlayerDisconnected", "playerGoes", pGone )
-hook.Add( "PlayerDeath", "DeathState", DeathStat )
-hook.Add( "TTTBeginRound", "bBeginsstats", roundStart)
-hook.Add( "TTTEndRound", "endsstats", roundEnd)
-hook.Add("ScalePlayerDamage", "ScalePlayerDamage.Headshot", function(plp, hitGroup)
+hook.Add( "PlayerSay", "StatsReportCommands", repCom)
+hook.Add( "PlayerInitialSpawn", "StatsplayerComes", pCome )
+hook.Add( "PlayerDisconnected", "StatsplayerGoes", pGone )
+hook.Add( "PlayerDeath", "StatsDeathState", DeathStat )
+hook.Add( "TTTBeginRound", "StatsbBeginsstats", roundStart)
+hook.Add( "TTTEndRound", "Statsendsstats", roundEnd)
+hook.Add("ScalePlayerDamage", "StatsScalePlayerDamage.Headshot", function(plp, hitGroup)
     plp.lastHitGroup = hitGroup
 end)

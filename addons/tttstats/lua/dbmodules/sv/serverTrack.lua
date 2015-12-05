@@ -18,7 +18,7 @@ function loadServerStats( )
 		return
 	end
 	
-	lHost = db:escape(GetConVarString("hostname"));
+	lHost = db:escape(GetConVar("hostname"):GetString());
 	ipPort = string.format("%s:%s", ServerStatsDB.ServerIP, ServerStatsDB.ServerPort);
 	curServ = tostring(ipPort);
 	currentMap = game.GetMap();
@@ -102,47 +102,6 @@ function getServers(ply)
 	end
 	getAllQ:start()
 end
-
-local adverts = {
-"To view the server browser type /servers in chat!",
-"Somone RDM'ing? Use /report name message to report them :)",
-"Want to play a different gamemode? Type /servers in chat!",
-"Having a good time? Then add this server to your favourites - Type !favourites to find out how!",
-"Seen someone breaking the rules? Then use /report name message to report them!",
-"Type !rank or !rank playername to check out a players rank!"
-}
-
-function superAd()
-	for k,v in pairs(player.GetAll()) do
-		v:ChatPrint(tostring(table.Random(adverts)))
-	end
-end
-timer.Create( "SuperADD", 120, 0, superAd)
-
-
-function awsomeAdd()
-	
-	if not ServerStatsDB.connected then return; end
-	local updateCheck = os.time() - 60;
-	local AddQ = db:query( "SELECT * FROM server_track WHERE players > 0 AND lastupdate > '" .. updateCheck .. "'")
-    AddQ.onSuccess = function(q, sdata)
-		if #sdata == 0 then return; end
-		local datarow = table.Random(sdata);
-		curServ = tostring(datarow['hostip'] );
-		if tostring(datarow['hostip']) == ipPort then return; end
-		local advert = string.format("Type !join to play on: %s - Current map: %s - Players: %s/%s!", tostring(datarow['hostname']), tostring(datarow['map']), tostring(datarow['players']), tostring(datarow['maxplayers']));
-		
-		for k,v in pairs(player.GetAll()) do
-			v:ChatPrint(advert)
-		end
-	end	
-	AddQ.onError = function(q,e)
-		notifymessage("[Awesome Tracker]Something went wrong")
-		notifyerror(e)
-	end
-	AddQ:start()
-end
-timer.Create( "AwsineADZORZ", 455, 0, awsomeAdd)
 
 local function chatCom( ply, text, toall )
 

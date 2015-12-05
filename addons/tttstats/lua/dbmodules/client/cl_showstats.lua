@@ -4,7 +4,7 @@ function showStats(len)
 	rPly = net.ReadEntity();
 	steamid = rPly:SteamID64()
 	print(steamid)
-	local url = string.format("http://thehiddennation.com/ttt_stats/motd.php?steamid=%s", steamid)
+	local url = string.format("http://200.6.36.127/ttt_stats2/motd.php?steamid=%s", steamid)
 	print(url)
 	local window = vgui.Create( "DFrame" )
 	if ScrW() > 640 then
