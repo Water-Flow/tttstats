@@ -1,7 +1,0 @@
-==HTML/ PHP coding===
-
-Play with the idea of using RCON in TTT stats for certain things... not sure what i would really do for the moment :/ but hey it might be fun.
-
-Advanced search! i want lots of different ways to search, via < or > amounts in kills, deaths, KDR, various other things basically advanced search via everything!
-
-===HTML/ PHP coding===
